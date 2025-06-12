@@ -10,6 +10,16 @@ SH_seaice_regions =gp.read_file(data_path+'NSIDC-0780_SeaIceRegions_SH-NASA_v1.0
 ATL20_area_NH = xr.open_dataset(data_path+'NSIDC0771_CellArea_PS_N25km_v1.0.nc').cell_area
 ATL20_area_SH = xr.open_dataset(data_path+'NSIDC0771_CellArea_PS_S25km_v1.0.nc').cell_area
 
+def is_valid_zarr_store(s3map):
+    """Check whether a Zarr store is valid and readable as a consolidated dataset."""
+    try:
+        # Try to open with consolidated metadata
+        zarr.convenience.open_consolidated(s3map)
+        return True
+    except Exception as e:
+        print(f"Skipping invalid store: {s3map.root} -- {e}")
+        return False
+
 def SAE(model,obs,weight):
     """Compute Sum Absolute Error (SAE) between model and observations, weighted by cell area."""
     O = (model - obs).where((model - obs)>0).fillna(0)
