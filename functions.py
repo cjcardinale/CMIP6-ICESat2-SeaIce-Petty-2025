@@ -3,6 +3,7 @@ import regionmask
 import xarray as xr
 import geopandas as gp
 import warnings
+import zarr
 
 data_path = 'files/'
 NH_seaice_regions = gp.read_file(data_path+'NSIDC-0780_SeaIceRegions_NH_v1.0.shp')
