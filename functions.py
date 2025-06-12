@@ -11,6 +11,7 @@ ATL20_area_NH = xr.open_dataset(data_path+'NSIDC0771_CellArea_PS_N25km_v1.0.nc')
 ATL20_area_SH = xr.open_dataset(data_path+'NSIDC0771_CellArea_PS_S25km_v1.0.nc').cell_area
 
 def SAE(model,obs,weight):
+    """Compute Sum Absolute Error (SAE) between model and observations, weighted by cell area."""
     O = (model - obs).where((model - obs)>0).fillna(0)
     U = (obs - model).where((obs - model)>0).fillna(0)
     total = O+U
@@ -25,6 +26,7 @@ def SAE(model,obs,weight):
     return sum*1e-6
 
 def MAE(model, obs, dim=None, skipna=True, weights=None):
+    """Compute Mean Absolute Error (MAE) between model and observations."""
     res = np.abs(model - obs)
     if weights is not None:
         res = res.weighted(weights)
@@ -32,6 +34,7 @@ def MAE(model, obs, dim=None, skipna=True, weights=None):
     return res
 
 def to_monthly(ds):
+    """Convert the time dimesnion to month and year dimensions."""
     year = ds.time.dt.year
     month = ds.time.dt.month
     # assign new coords
@@ -40,10 +43,20 @@ def to_monthly(ds):
     return ds.set_index(time=("year", "month")).unstack("time") 
 
 def sel_model(ds,sid='CESM2'):
+    """Select a specific model from the dataset using a source_id prefix."""
     subset = ds.sel(member_id=ds.member_id.str.split('split','_').sel(split=0)==sid)
     return subset
 
+def ensemble_count(ds,rename=True):
+    """Count ensemble members for each model, optionally renaming to 'source_id'."""
+    members_count = ds.member_id.groupby(ds.member_id.str.split('split','_').sel(split=0)).count()
+    members_count['member_id'] = members_count.member_id.astype(dtype='<U25')
+    if rename==True:
+        members_count=members_count.rename({'member_id':'source_id'})
+    return members_count.to_dataset(name='members')
+
 def spatial_average(ds,weight=None,keep_zeros=True,sector_mean='NH'):
+    """Compute spatial average for a dataset within defined polar sectors using area or latitude weights."""
     ds = ds.copy()
     if 'lat' in ds.coords and 'y' in ds.dims:
         if sector_mean in ['Inner Arctic','IA']:
@@ -99,6 +112,7 @@ def spatial_average(ds,weight=None,keep_zeros=True,sector_mean='NH'):
     return ds_mean
 
 def ensemble_mean(ds,thresh=1):
+    """Compute the ensemble mean for models with a minimum number of members."""
     members_count = ds.member_id.groupby(ds.member_id.str.split('split','_').sel(split=0)).count()
     models = members_count.where(members_count>=thresh).dropna('member_id').member_id
     ens_mean = ds.groupby(ds.member_id.str.split('split','_').sel(split=0)).mean()
@@ -107,6 +121,7 @@ def ensemble_mean(ds,thresh=1):
     return ens_mean
 
 def int_variability(ds,thresh=2,dims='member_id'):
+    """Compute internal variability (variance) for models with at least `thresh` ensemble members."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         #ds = ds.dropna('member_id','all')
@@ -119,19 +134,17 @@ def int_variability(ds,thresh=2,dims='member_id'):
 
 def find_nan_surrounded_by_nan(data, threshold=0.8):
     """
-    Find NaN grid cells in a 3D xarray.DataArray (lat, lon, time) that are surrounded
-    by at least `threshold` fraction of NaN values in their neighboring cells for each time step.
-    
+    Identify NaN grid cells in a 3D DataArray that are surrounded by a high fraction of NaN values in their 3x3 neighborhood.
+    Example usage: remove zeros from nan streak in the UKESM1-0-LL [after applying ds.fillna(0)] to avoid large values when computing internal variability
+
     Parameters:
-        data (xr.DataArray): Input 3D DataArray with dimensions (time, lat, lon).
-        threshold (float): Fraction of neighbors that must be NaN for a cell to be marked as True.
-        
+        data (xr.DataArray): Input with dimensions (time, y, x).
+        threshold (float): Fraction of NaN neighbors needed to flag a point.
+
     Returns:
-        xr.DataArray: A boolean DataArray with the same dimensions as `data`,
-                      where True indicates NaN grid cells surrounded by NaN values.
+        xr.DataArray: Boolean mask where True indicates surrounded NaNs.
     """
     def process_single_time_slice(slice_2d):
-        """Process a single 2D slice of the DataArray."""
         # Create a padded array to check neighbors
         padded_data = np.pad(slice_2d, pad_width=1, mode='constant', constant_values=np.nan)
 
