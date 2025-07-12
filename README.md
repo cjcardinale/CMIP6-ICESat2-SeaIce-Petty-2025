@@ -53,7 +53,6 @@ The environment.yml and requirements.txt are untested and changes may be needed.
 - **Use Case**: Best for understanding the full methodology or modifying analysis parameters
 
 ## Important Notes
-more members found: EC-Earth3-CC (7 sic, 8 sifb_d, 8 sit), EC-Earth3 (11 sic, 9 tfb_d, 10 sit), EC-Earth3-Veg (2 sic, 2 sit), NorESM2-LM (1 sic, 8 tfb_d, 7 sit)
 - **Data Availability**: Due to shifting availability on ESGF data nodes, some figures may not precisely match the published manuscript
   - **EC-Earth3**:
     - 7 additional members that include sea ice concentration
