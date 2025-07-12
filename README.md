@@ -36,18 +36,19 @@ source .venv/bin/activate
 # Install packages from requirements.txt
 uv pip install -r requirements.txt
 ```
+The environment.yml and requirements.txt are untested and changes may be needed.
 
 ## Notebook Descriptions
 
 ### Results.ipynb
-- **Purpose**: Quick figure reproduction using pre-processed data
+- **Purpose**: Quick figure reproduction using preprocessed data
 - **Runtime**: A few minutes
-- **Data**: Loads pre-computed climatologies, error statistics, and internal variability
+- **Data**: Loads precomputed climatologies, error statistics, and internal variability
 - **Use Case**: Best for reproducing manuscript figures efficiently
 
 ### Data-processing_results.ipynb
 - **Purpose**: Complete data processing workflow from raw CMIP6 outputs
-- **Runtime**: Full model download: ~25 minutes - 2 hours (if not loading pre-processed internal variability data)
+- **Runtime**: Full model download: ~25 minutes - 2 hours (if not loading preprocessed internal variability data)
 - **Data**: Processes raw CMIP6 data, computes all statistics from scratch
 - **Use Case**: Best for understanding the full methodology or modifying analysis parameters
 
@@ -78,7 +79,7 @@ more members found: EC-Earth3-CC (7 sic, 8 sifb_d, 8 sit), EC-Earth3 (11 sic, 9 
 ## Repository Structure
 
 ```
-├── Results.ipynb                 # Main figure reproduction notebook (pre-processed data)
+├── Results.ipynb                 # Main figure reproduction notebook (preprocessed data)
 ├── Data-processing_results.ipynb # Full data processing workflow
 ├── functions.py                  # Custom analysis functions
 ├── environment.yml               # Conda environment file
