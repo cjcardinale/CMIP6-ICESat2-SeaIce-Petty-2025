@@ -1,8 +1,10 @@
 # CMIP6-ICESat2-SeaIce-Petty-2025
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXX)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15849469.svg)](https://doi.org/10.5281/zenodo.15849469)
 
 This repository contains the analysis code and data processing for [Petty et al. (2025)](https://egusphere.copernicus.org/preprints/2025/egusphere-2025-766/), including comparisons of CMIP6 model outputs with ICESat-2 sea ice freeboard and thickness and OSI SAF sea ice concentration.
+
+Contact: Chris Cardinale | ccardina@umd.edu
 
 ## Overview
 
@@ -12,7 +14,7 @@ This repository provides Jupyter Notebooks that demonstrate the primary aspects 
 - **Statistical Analysis**: Code to estimate internal variability and model plausibility indices  
 - **Visualization**: Code to produce key figures shown in the manuscript
 
-## Quick Start
+## Getting Started
 
 ### Prerequisites & Environment Setup
 
@@ -35,25 +37,7 @@ source .venv/bin/activate
 uv pip install -r requirements.txt
 ```
 
-### Running the Analysis
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/cjcardinale/CMIP6-ICESat2-SeaIce-Petty-2025.git
-   cd CMIP6-ICESat2-SeaIce-Petty-2025
-   ```
-
-2. **Activate your environment:**
-   ```bash
-   conda activate cmip6-icesat2  # or source cmip6-env/bin/activate for pip
-   ```
-   
-3. **Choose your analysis approach:**
-   - **For fast figure reproduction**: Open `Results.ipynb` to reproduce manuscript figures using pre-processed data
-   - **For data processing and figure reproduction**: Open `Data-processing_results.ipynb` to see the full data processing workflow, then plot
-   - Data is automatically accessed from AWS S3
-
-## Additional notebook Descriptions
+## Notebook Descriptions
 
 ### Results.ipynb
 - **Purpose**: Quick figure reproduction using pre-processed data
@@ -100,8 +84,8 @@ more members found: EC-Earth3-CC (7 sic, 8 sifb_d, 8 sit), EC-Earth3 (11 sic, 9 
 ├── environment.yml               # Conda environment file
 ├── requirements.txt              # Pip requirements file
 ├── files/                        # Supporting data files
-    ├── NSIDC-0780_SeaIceRegions_NH_v1.0.shp
-    ├── NSIDC-0780_SeaIceRegions_SH-NASA_v1.0.shp
-    ├── NSIDC0771_CellArea_PS_N25km_v1.0.nc
-    └── NSIDC0771_CellArea_PS_S25km_v1.0.nc
+│   ├── NSIDC-0780_SeaIceRegions_NH_v1.0.*
+│   ├── NSIDC-0780_SeaIceRegions_SH-NASA_v1.0.*
+│   ├── NSIDC0771_CellArea_PS_N25km_v1.0.nc
+│   └── NSIDC0771_CellArea_PS_S25km_v1.0.nc
 ```
