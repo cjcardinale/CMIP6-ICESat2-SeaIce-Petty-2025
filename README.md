@@ -48,7 +48,7 @@ The environment.yml and requirements.txt are untested and changes may be needed.
 
 ### Data-processing_results.ipynb
 - **Purpose**: Complete data processing workflow from raw CMIP6 outputs
-- **Runtime**: Full model download: ~25 minutes - 2 hours (if not loading preprocessed internal variability data)
+- **Runtime**: Full CMIP6 download: ~25 minutes - 2 hours (if not loading preprocessed internal variability data)
 - **Data**: Processes raw CMIP6 data, computes all statistics from scratch
 - **Use Case**: Best for understanding the full methodology or modifying analysis parameters
 
