@@ -1,0 +1,11 @@
+Cartopy==0.23.0
+cmocean==4.0.3
+dask==2025.3.0
+geopandas==1.0.1
+matplotlib==3.9.1
+numpy==1.26.4
+regionmask==0.13.0
+s3fs==2025.3.2
+seaborn==0.13.2
+xarray==2025.3.1
+zarr==2.18.7

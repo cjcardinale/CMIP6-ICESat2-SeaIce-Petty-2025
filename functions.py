@@ -12,7 +12,15 @@ ATL20_area_NH = xr.open_dataset(data_path+'NSIDC0771_CellArea_PS_N25km_v1.0.nc')
 ATL20_area_SH = xr.open_dataset(data_path+'NSIDC0771_CellArea_PS_S25km_v1.0.nc').cell_area
 
 def is_valid_zarr_store(s3map):
-    """Check whether a Zarr store is valid and readable as a consolidated dataset."""
+    """
+    Check whether a Zarr store is valid and readable as a consolidated dataset.
+    
+    Parameters:
+        s3map: Zarr store mapping object (e.g., S3Map or FSMap)
+        
+    Returns:
+        bool: True if the store is valid and readable, False otherwise
+    """
     try:
         # Try to open with consolidated metadata
         zarr.convenience.open_consolidated(s3map)
@@ -22,22 +30,47 @@ def is_valid_zarr_store(s3map):
         return False
 
 def SAE(model,obs,weight):
-    """Compute Sum Absolute Error (SAE) between model and observations, weighted by cell area."""
+    """
+    Compute Sum Absolute Error (SAE) between model and observations, weighted by cell area.
+    
+    Parameters:
+        model (xr.DataArray): Model data array
+        obs (xr.DataArray): Observational data array  
+        weight (xr.DataArray): Weight array for spatial weighting (typically cell area)
+        
+    Returns:
+        xr.DataArray: Sum absolute error scaled by 1e-6
+    """
+    # Calculate overestimate (model > obs) and underestimate (obs > model) components
     O = (model - obs).where((model - obs)>0).fillna(0)
     U = (obs - model).where((obs - model)>0).fillna(0)
     total = O+U
+    
+    # Reset coordinate indices to ensure proper alignment
     total['x'] = np.arange(0,total.x.size,1)
     total['y'] = np.arange(0,total.y.size,1)
     if isinstance(weight,xr.DataArray):
         weight['x'] = total.x
         weight['y'] = total.y
-    #integ1 = (total*weight).integrate('x')
-    #integ2 = (integ1).integrate('y')
+
+    # Compute weighted sum and scale to appropriate units
     sum = (total*weight).sum(['x','y'])
     return sum*1e-6
 
 def MAE(model, obs, dim=None, skipna=True, weights=None):
-    """Compute Mean Absolute Error (MAE) between model and observations."""
+    """
+    Compute Mean Absolute Error (MAE) between model and observations.
+    
+    Parameters:
+        model (xr.DataArray): Model data array
+        obs (xr.DataArray): Observational data array
+        dim (str or list, optional): Dimension(s) over which to compute the mean.
+        skipna (bool, optional): Whether to skip NaN values. Default is True.
+        weights (xr.DataArray, optional): Weights for weighted average.
+        
+    Returns:
+        xr.DataArray: Mean absolute error
+    """
     res = np.abs(model - obs)
     if weights is not None:
         res = res.weighted(weights)
@@ -45,7 +78,15 @@ def MAE(model, obs, dim=None, skipna=True, weights=None):
     return res
 
 def to_monthly(ds):
-    """Convert the time dimesnion to month and year dimensions."""
+    """
+    Convert the time dimension to month and year dimensions.
+    
+    Parameters:
+        ds (xr.Dataset or xr.DataArray): Input dataset with time dimension
+        
+    Returns:
+        xr.Dataset or xr.DataArray: Reshaped data with separate year and month dimensions
+    """
     year = ds.time.dt.year
     month = ds.time.dt.month
     # assign new coords
@@ -54,76 +95,119 @@ def to_monthly(ds):
     return ds.set_index(time=("year", "month")).unstack("time") 
 
 def sel_model(ds,sid='CESM2'):
-    """Select a specific model from the dataset using a source_id prefix."""
+    """
+    Select a specific model from the dataset using a source_id prefix.
+    
+    Parameters:
+        ds (xr.Dataset or xr.DataArray): Input dataset with member_id dimension
+        sid (str, optional): Source ID prefix to select. E.g., 'CESM2'.
+        
+    Returns:
+        xr.Dataset or xr.DataArray: Subset containing all members of the specified model
+    """
+    # Extract model name from member_id by splitting on '_' and taking first part
     subset = ds.sel(member_id=ds.member_id.str.split('split','_').sel(split=0)==sid)
     return subset
 
 def ensemble_count(ds,rename=True):
-    """Count ensemble members for each model, optionally renaming to 'source_id'."""
+    """
+    Count ensemble members for each model, optionally renaming to 'source_id'.
+    
+    Parameters:
+        ds (xr.Dataset or xr.DataArray): Input dataset with member_id dimension
+        rename (bool, optional): Whether to rename 'member_id' to 'source_id'. Default is True.
+        
+    Returns:
+        xr.Dataset: Dataset containing member counts for each model
+    """
     members_count = ds.member_id.groupby(ds.member_id.str.split('split','_').sel(split=0)).count()
     members_count['member_id'] = members_count.member_id.astype(dtype='<U25')
     if rename==True:
         members_count=members_count.rename({'member_id':'source_id'})
     return members_count.to_dataset(name='members')
 
-def spatial_average(ds,weight=None,keep_zeros=True,sector_mean='NH'):
-    """Compute spatial average for a dataset within defined polar sectors using area or latitude weights."""
-    ds = ds.copy()
+def spatial_average(ds, weight=None, keep_zeros=True, sector_mean='NH', mask=None):
+    """
+    Compute spatial average for a dataset within defined polar sectors using area or latitude weights.
+    Optionally, pass a precomputed mask for efficiency.
+    
+    Parameters:
+        ds (xr.Dataset or xr.DataArray): Input dataset with lat/lon coordinates
+        weight (xr.DataArray, optional): Area weights for spatial averaging. If None, uses cosine latitude weighting.
+        keep_zeros (bool, optional): Whether to include zero values in averaging. Default is True.
+        sector_mean (str or dict, optional): Sector for averaging. Options: 'NH', 'SH', 'Arctic', 'Antarctic', 
+                                           'Inner_Arctic', or dict with region specifications. Default is 'NH'.
+        mask (xr.DataArray, optional): Precomputed boolean mask for efficiency. Default is None.
+        
+    Returns:
+        xr.Dataset or xr.DataArray: Spatially averaged data
+    """
+    # Sector selection - create boolean mask based on latitude or region
     if 'lat' in ds.coords and 'y' in ds.dims:
-        if sector_mean in ['Inner Arctic','IA']:
+        # Handle alternative naming for Inner Arctic
+        if sector_mean in ['Inner Arctic', 'IA']:
             sector_mean = 'Inner_Arctic'
+        # Define sector masks
         if sector_mean == 'NH':
-            ds_subset = ds.where(ds.lat>0)
-            lat = ds.lat.where(ds.lat>0)
+            mask = ds.lat > 0
         elif sector_mean == 'SH':
-            ds_subset = ds.where(ds.lat<0)
-            lat = ds.lat.where(ds.lat<0)
+            mask = ds.lat < 0
         elif sector_mean == 'Arctic':
-            ds_subset = ds.where(ds.lat>60)
-            lat = ds.lat.where(ds.lat>60)
+            mask = ds.lat > 60
         elif sector_mean == 'Antarctic':
-            ds_subset = ds.where(ds.lat<-60)
-            lat = ds.lat.where(ds.lat<-60)
+            mask = ds.lat < -60
         elif sector_mean == 'Inner_Arctic':
-            df = NH_seaice_regions
-            mask = regionmask.mask_geopandas(df, ds.lon, ds.lat,overlap=False)
-            ds_subset = ds.where(mask.isin([0,1,2,3,4,5,6]))
-            lat = ds.lat.where(mask.isin([0,1,2,3,4,5,6]))
-        elif isinstance(sector_mean, dict): 
+            # Use predefined sea ice regions
+            mask = regionmask.mask_geopandas(NH_seaice_regions, ds.lon, ds.lat, overlap=False).isin([0,1,2,3,4,5,6])
+        elif isinstance(sector_mean, dict):
+            # Custom region dictionary: {'Arctic': [region_ids]} or {'Antarctic': [region_ids]}
             if list(sector_mean.keys())[0] == 'Arctic':
-                df = NH_seaice_regions
-                mask = regionmask.mask_geopandas(df, ds.lon, ds.lat,overlap=False)
-                ds_subset = ds.where(mask.isin(list(sector_mean.values())[0]))
-                lat = ds.lat.where(mask.isin(list(sector_mean.values())[0]))
-        elif isinstance(sector_mean, dict): 
-            if list(sector_mean.keys())[0] == 'Antarctic':
-                df = SH_seaice_regions
-                mask = regionmask.mask_geopandas(df, ds.lon, ds.lat,overlap=False)
-                ds_subset = ds.where(mask.isin(list(sector_mean.values())[0]))
-                lat = ds.lat.where(mask.isin(list(sector_mean.values())[0]))
-        else: 
-            ds_subset = ds
-        if not isinstance(weight,xr.DataArray):
-            #lat is already a 2D field, so each point is weighted without having to broadcast!
-            #if data is on a recticular grid, then we can just weight is by the cosine of lat
-            lat = lat.where(ds_subset.notnull())
-            weight=np.cos(np.deg2rad(lat))/np.cos(np.deg2rad(lat)).mean('y')
-            ds_mean = (ds_subset*weight).mean(['x','y'])
+                mask = regionmask.mask_geopandas(NH_seaice_regions, ds.lon, ds.lat, overlap=False).isin(list(sector_mean.values())[0])
+            elif list(sector_mean.keys())[0] == 'Antarctic':
+                mask = regionmask.mask_geopandas(SH_seaice_regions, ds.lon, ds.lat, overlap=False).isin(list(sector_mean.values())[0])
         else:
-            #if data is on a curvilinear grid, we need to weight it by the grid-cell area
-            #here, we just compute the average over the area where there is data or where 
-            #sea ice variables are not 0
-            #ds_subset,weight = _fix_grids(ds_subset,weight)
-            if keep_zeros==False: 
-                ds_mean = ((ds_subset*weight).sum(['x', 'y'],min_count=1)
-                            /weight.where(np.logical_and(ds_subset.notnull(),ds_subset>0)).sum(['x','y']))
-            else:
-                ds_mean = ((ds_subset*weight).sum(['x', 'y'],min_count=1)
-                            /weight.where(ds_subset.notnull()).sum(['x','y']))
+            # Default: include all points
+            mask = xr.full_like(ds.lat, True, dtype=bool)
+        ds_subset = ds.where(mask)
+        lat = ds.lat.where(mask)
+    else:
+        # No spatial subsetting if lat/lon not available
+        ds_subset = ds
+        lat = ds.lat if 'lat' in ds.coords else None
+
+    # Weighting
+    if weight is None and lat is not None:
+        # Use cosine latitude weighting when no explicit weights provided
+        lat = lat.where(ds_subset.notnull())
+        weight = np.cos(np.deg2rad(lat)) / np.cos(np.deg2rad(lat)).mean('y')
+        ds_mean = (ds_subset * weight).mean(['x', 'y'])
+    elif weight is not None:
+        # Use provided weights (typically cell area)
+        if keep_zeros is False:
+            # Exclude zero values from weighting
+            ds_mean = ((ds_subset * weight).sum(['x', 'y'], min_count=1) /
+                       weight.where(np.logical_and(ds_subset.notnull(), ds_subset > 0)).sum(['x', 'y']))
+        else:
+            # Include zero values in weighting
+            ds_mean = ((ds_subset * weight).sum(['x', 'y'], min_count=1) /
+                       weight.where(ds_subset.notnull()).sum(['x', 'y']))
+    else:
+        # Simple unweighted average
+        ds_mean = ds_subset.mean(['x', 'y'])
+
     return ds_mean
 
 def ensemble_mean(ds,thresh=1):
-    """Compute the ensemble mean for models with a minimum number of members."""
+    """
+    Compute the ensemble mean for models with a minimum number of members.
+    
+    Parameters:
+        ds (xr.Dataset or xr.DataArray): Input dataset with member_id dimension
+        thresh (int, optional): Minimum number of ensemble members required. Default is 1.
+        
+    Returns:
+        xr.Dataset or xr.DataArray: Ensemble mean for qualifying models
+    """
     members_count = ds.member_id.groupby(ds.member_id.str.split('split','_').sel(split=0)).count()
     models = members_count.where(members_count>=thresh).dropna('member_id').member_id
     ens_mean = ds.groupby(ds.member_id.str.split('split','_').sel(split=0)).mean()
@@ -132,10 +216,19 @@ def ensemble_mean(ds,thresh=1):
     return ens_mean
 
 def int_variability(ds,thresh=2,dims='member_id'):
-    """Compute internal variability (variance) for models with at least `thresh` ensemble members."""
+    """
+    Compute internal variability (variance) for models with at least `thresh` ensemble members.
+    
+    Parameters:
+        ds (xr.Dataset or xr.DataArray): Input dataset with member_id dimension
+        thresh (int, optional): Minimum number of ensemble members required. Default is 2.
+        dims (str, optional): Dimension over which to compute variance. Default is 'member_id'.
+        
+    Returns:
+        xr.Dataset or xr.DataArray: Internal variability (variance) for qualifying models
+    """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        #ds = ds.dropna('member_id','all')
         members_count = ds.member_id.groupby(ds.member_id.str.split('split','_').sel(split=0)).count()
         models = members_count.where(members_count>=thresh).dropna('member_id').member_id
         int_var = ds.groupby(ds.member_id.str.split('split','_').sel(split=0)).std(dims,ddof=1)**2
@@ -195,3 +288,4 @@ def find_nan_surrounded_by_nan(data, threshold=0.8):
 
     # Return the result
     return result.rename("nan_surrounded_by_nan")
+
