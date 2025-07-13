@@ -24,7 +24,7 @@ Different options for setting up the required Python environment:
 ```bash
 # Create environment from environment.yml
 conda env create -f environment.yml
-conda activate cmip6-icesat2
+conda activate seaice-env
 ```
 
 #### Using pip
