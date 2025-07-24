@@ -20,23 +20,35 @@ This repository provides Jupyter Notebooks that demonstrate the primary aspects 
 
 Different options for setting up the required Python environment:
 
-#### Using Conda
+#### Using Conda (or mamba)
 ```bash
 # Create environment from environment.yml
 conda env create -f environment.yml
-conda activate seaice-env
+# Activate the environment
+conda activate cmip6-seaice
+# Register this environment as a Jupyter kernel
+python -m ipykernel install --user --name cmip6-seaice --display-name "cmip6-seaice"
+# Check that the kernel is registered
+jupyter kernelspec list
+# Restart your JupyterHub server or JupyterLab instance
 ```
 
 #### Using pip
 ```bash
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
 # Create a new virtual environment with uv
 uv venv
 # Activate the virtual environment
 source .venv/bin/activate  
 # Install packages from requirements.txt
 uv pip install -r requirements.txt
+# Optionally register this virtual environment as a Jupyter kernel with a custom name
+python -m ipykernel install --user --name=cmip6-seaice --display-name "cmip6-seaice"
+# Select the new kernel in the top right of the notebook
+# or start a JupyterLab instance
+jupyter lab
 ```
-The environment.yml and requirements.txt are untested and changes may be needed.
 
 ## Notebook Descriptions
 
