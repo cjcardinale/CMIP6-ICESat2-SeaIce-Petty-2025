@@ -90,12 +90,12 @@ jupyter lab
 ## Repository Structure
 
 ```
-├── Results.ipynb                 # Main figure reproduction notebook (preprocessed data)
-├── Data-processing_results.ipynb # Full data processing workflow
-├── functions.py                  # Custom analysis functions
-├── environment.yml               # Conda environment file
-├── requirements.txt              # Pip requirements file
-├── files/                        # Supporting data files
+├── CMIP6_seaice_preprocessed_data_fast.ipynb    # Main figure reproduction notebook (preprocessed data)
+├── CMIP6_seaice_incl_full_data_processing.ipynb # Full data processing workflow and figure reproduction 
+├── functions.py                                 # Custom analysis functions
+├── environment.yml                              # Conda environment file
+├── requirements.txt                             # Pip requirements file
+├── files/                                       # Supporting data files
 │   ├── NSIDC-0780_SeaIceRegions_NH_v1.0.*
 │   ├── NSIDC-0780_SeaIceRegions_SH-NASA_v1.0.*
 │   ├── NSIDC0771_CellArea_PS_N25km_v1.0.nc
