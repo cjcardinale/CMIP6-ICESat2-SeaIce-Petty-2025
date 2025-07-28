@@ -38,7 +38,7 @@ jupyter kernelspec list
 # Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 # Create a new virtual environment with uv
-uv venv
+uv venv --python 3.11
 # Activate the virtual environment
 source .venv/bin/activate  
 # Install packages from requirements.txt
@@ -52,13 +52,13 @@ jupyter lab
 
 ## Notebook Descriptions
 
-### Results.ipynb
+### CMIP6_seaice_preprocessed_data_fast.ipynb
 - **Purpose**: Quick figure reproduction using preprocessed data
 - **Runtime**: A few minutes
 - **Data**: Loads precomputed climatologies, error statistics, and internal variability
 - **Use Case**: Best for reproducing manuscript figures efficiently
 
-### Data-processing_results.ipynb
+### CMIP6_seaice_incl_full_data_processing.ipynb
 - **Purpose**: Complete data processing workflow from raw CMIP6 outputs
 - **Runtime**: Full CMIP6 download: ~25 minutes - 2 hours (if not loading preprocessed internal variability data)
 - **Data**: Processes raw CMIP6 data, computes all statistics from scratch
